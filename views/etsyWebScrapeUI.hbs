@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Etsy Web Scraper</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        .spinner-border {
+            display: none;
+            width: 3rem;
+            height: 3rem;
+            margin: auto;
+        }
+        .full-width {
+            width: 100%;
+        }
+        .container-padding {
+            padding: 1rem;
+        }
+        #drop_zone {
+        width: 100%;
+        height: 200px;
+        border: 2px dashed #aaa;
+        border-radius: 5px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        cursor: pointer;
+        background-color: #f2f2f2;
+        }
+        #drop_zone.over {
+        border-color: #777;
+        background-color: #e6e6e6; /* darker grey when a file is dragged over */
+        }
+        #drop_zone.file-dropped {
+            background-color: #e6f7e9; /* very light green when a file is dropped */
+        }
+        #midjourney_drop_zone {
+        width: 100%;
+        height: 200px;
+        border: 2px dashed #aaa;
+        border-radius: 5px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        cursor: pointer;
+        background-color: #f2f2f2;
+        }
+        #midjourney_drop_zone.over {
+        border-color: #777;
+        background-color: #e6e6e6; /* darker grey when a file is dragged over */
+        }
+        #midjourney_drop_zone.file-dropped {
+            background-color: #e6f7e9; /* very light green when a file is dropped */
+        }
+        form, hr {
+        margin-top: 20px;
+        margin-bottom: 20px;
+        }
+        hr {
+        border: none;
+        border-top: 1px solid #000000;
+        }
+        .btn-primary {
+        background-color: #5da8f7;
+        border-color: #5da8f7;
+        }
+        .btn-secondary {
+            background-color: #5f7e99;
+            border-color: #5f7e99;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid center-screen container-padding" style="width: 80%;">
+        <div class="row full-width">
+            <div class="full-width">
+                <h1 class="text-center">Etsy Web Scraper</h1>
+                <form id="etsyForm" action="/etsyScraperEndpoint" method="post" class="form-custom text-center">
+                    <textarea name="urls" class="form-control mb-2" style="width: 100%;" rows="8" placeholder="Enter URLs, one per line" required></textarea>
+                    <input type="hidden" id="scrapeButtonType" name="scrapeButtonType" value="">
+                    <button type="button" class="btn btn-primary mb-2" id="scrapebutton1">Scrape All Pages</button>
+                    <button type="button" class="btn btn-secondary mb-2" id="scrapebutton2">Scrape Single Page</button>
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    {{#if completedScrape}}
+                        <div class="alert alert-success mt-3" role="alert">
+                            Scrape successfully completed!
+                        </div>
+                    {{/if}}
+                </form>
+            </div>
+        </div>
+    </div>
+    <hr>
+    <div class="container-fluid container-padding" style="width: 80%;">
+        <div class="row full-width">
+            <div class="full-width">
+                <h1 class="text-center">Edit Text File</h1>
+                <form id="myForm" action="/cleanseTextfileEndpoint/stage1" method="post" enctype="multipart/form-data" class="form-custom text-center">
+                    <div id="drop_zone">Drag and drop .txt file here or click to select</div>
+                    <input type="file" id="fileInput" name="txtfile" accept=".txt" class="form-control mb-2" style="width: 100%; display: none;" required>
+                    <button type="submit" class="btn btn-primary mb-2" id="button1" style="margin-top: 10px;">Stage 1 remove phrases & add commas</button>
+                    <button type="button" class="btn btn-secondary mb-2" id="button2" style="margin-top: 10px;">Stage 2 remove numbers</button>
+                    <textarea name="textinput" class="form-control mb-2" style="width: 100%;" rows="8" placeholder="Enter any extra words to be added to 'find_and_delete_phrases.txt'"></textarea>
+                    {{#if completedCleanse}}
+                        <div class="alert alert-success" role="alert">
+                            Cleanse completed. File saved at: {{filePath}}
+                        </div>
+                    {{/if}}
+                    {{#if moreThanThreeKeywords}}
+                        <div class="alert alert-danger" role="alert">
+                            <strong>The following titles have more than 3 search terms:</strong>
+                            {{#each moreThanThreeKeywords}}
+                                <p>{{this}}</p>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </form>
+            </div>
+        </div>
+    </div>
+    <hr>
+    <div class="container-fluid container-padding" style="width: 80%;">
+        <div class="row full-width">
+            <div class="full-width">
+                <h1 class="text-center">Midjourney Images</h1>
+                <form id="midjourney_myForm" action="/midjourneyImagesEndpoint" method="post" enctype="multipart/form-data" class="form-custom text-center">
+                    <div id="midjourney_drop_zone">Drag and drop the 'with numbers'.txt file here or click to select</div>
+                    <input type="file" id="midjourney_fileInput" name="txtfile" accept=".txt" class="form-control mb-2" style="width: 100%; display: none;" required>
+                    <input type="hidden" id="batch" name="batch" value="">
+                    <button type="button" class="btn btn-primary mb-2" id="midjourney_button1" style="margin-top: 10px;">Rename Batch 1</button>
+                    <button type="button" class="btn btn-primary mb-2" id="midjourney_button2" style="margin-top: 10px;">Rename Batch 2</button>
+                    {{#if batchMessage}}
+                        <div class="alert alert-success" role="alert">
+                            {{batchMessage}}
+                        </div>
+                    {{/if}}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('form').submit(function() {
+                $('.spinner-border').show();
+            });
+        });
+    </script>
+    <script>
+        document.getElementById('scrapebutton1').addEventListener('click', function() {
+            document.getElementById('scrapeButtonType').value = 'scrapebuttonallpages';
+            document.getElementById('etsyForm').submit();
+        });
+
+        document.getElementById('scrapebutton2').addEventListener('click', function() {
+            document.getElementById('scrapeButtonType').value = 'scrapebuttonsinglepage';
+            document.getElementById('etsyForm').submit();
+        });
+    </script>
+    <script>
+        //Script for the cleanse text file form
+        document.getElementById('button2').addEventListener('click', function() {
+            var myForm = document.getElementById('myForm');
+            if (myForm.checkValidity()) {
+                myForm.action = "/cleanseTextfileEndpoint/stage2";
+                myForm.submit();
+            } else {
+                alert('Please attach the .txt file');
+            }
+        });
+
+        document.getElementById('button2').addEventListener('click', function() {
+            var myForm = document.getElementById('myForm');
+            if (myForm.checkValidity()) {
+                myForm.action = "/cleanseTextfileEndpoint/stage2";
+                myForm.submit();
+            } else {
+                alert('Please attach the .txt file');
+            }
+        });
+
+        document.getElementById('button1').addEventListener('click', function(event) {
+            var myForm = document.getElementById('myForm');
+            if (!myForm.checkValidity()) {
+                event.preventDefault(); // prevent form submission
+                alert('Please attach the .txt file');
+            }
+        });
+
+        var dropZone = document.getElementById('drop_zone');
+        var fileInput = document.getElementById('fileInput');
+
+        dropZone.ondragover = function(event) {
+            event.preventDefault();
+            dropZone.classList.add('over');
+        };
+
+        dropZone.ondragleave = function(event) {
+            dropZone.classList.remove('over');
+        };
+
+        dropZone.ondrop = function(event) {
+            event.preventDefault();
+            fileInput.files = event.dataTransfer.files;
+            dropZone.textContent = event.dataTransfer.files[0].name;
+            dropZone.classList.remove('over');
+            dropZone.classList.add('file-dropped');
+        };
+
+        dropZone.onclick = function() {
+            fileInput.click();
+        };
+
+        fileInput.onchange = function() {
+            dropZone.textContent = fileInput.files[0].name;
+        };
+    </script>
+    <script>
+        //Script for the midjourney images form
+
+        document.getElementById('midjourney_button1').addEventListener('click', function(event) {
+            var myForm = document.getElementById('midjourney_myForm');
+            document.getElementById('batch').value = 'batch1';
+            if (!myForm.checkValidity()) {
+                event.preventDefault();
+                alert('Please attach the .txt file');
+            } else {
+                myForm.action = "/midjourneyImagesEndpoint";
+                myForm.submit();
+            }
+        });
+
+        document.getElementById('midjourney_button2').addEventListener('click', function(event) {
+            var myForm = document.getElementById('midjourney_myForm');
+            document.getElementById('batch').value = 'batch2';
+            if (!myForm.checkValidity()) {
+                event.preventDefault();
+                alert('Please attach the .txt file');
+            } else {
+                myForm.action = "/midjourneyImagesEndpoint";
+                myForm.submit();
+            }
+        });
+
+        var midjourneyDropZone = document.getElementById('midjourney_drop_zone');
+        var midjourneyFileInput = document.getElementById('midjourney_fileInput');
+
+        midjourneyDropZone.ondragover = function(event) {
+            event.preventDefault();
+            midjourneyDropZone.classList.add('over');
+        };
+
+        midjourneyDropZone.ondragleave = function(event) {
+            midjourneyDropZone.classList.remove('over');
+        };
+
+        midjourneyDropZone.ondrop = function(event) {
+            event.preventDefault();
+            midjourneyFileInput.files = event.dataTransfer.files;
+            midjourneyDropZone.textContent = event.dataTransfer.files[0].name;
+            midjourneyDropZone.classList.remove('over');
+            midjourneyDropZone.classList.add('file-dropped');
+        };
+
+        midjourneyDropZone.onclick = function() {
+            midjourneyFileInput.click();
+        };
+
+        midjourneyFileInput.onchange = function() {
+            midjourneyDropZone.textContent = midjourneyFileInput.files[0].name;
+        };
+    </script>
+</body>
+
+</html>

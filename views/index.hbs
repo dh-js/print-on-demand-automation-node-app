@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Etsy Automation App</title>
+    <!-- Add Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!-- Add Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            padding: 2rem;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+        }
+        h1 {
+            margin-bottom: 2rem;
+        }
+        .btn {
+            margin-top: 1rem;
+        }
+        .section {
+            margin-top: 2rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>POD Automation App</h1>
+        <hr>
+        <div class="section">
+            <h2 class="section-title">Etsy Listing Automation</h2>
+            <p>Choose which store to authenticate with Etsy and get started!</p>
+            <a href="https://www.etsy.com/oauth/connect?response_type=code&redirect_uri={{oauth_redirect_uri}}&scope=listings_r%20listings_w%20shops_r%20email_r&client_id={{ETSY_CLIENT_ID_DIGITAL}}&state={{oauth_state}}_digital&code_challenge={{oauth_code_challenge}}&code_challenge_method=S256" class="btn btn-primary btn-lg">
+                Authenticate Printable Living Store with Etsy
+            </a>
+            <a href="https://www.etsy.com/oauth/connect?response_type=code&redirect_uri={{oauth_redirect_uri}}&scope=listings_r%20listings_w%20shops_r%20email_r&client_id={{ETSY_CLIENT_ID_PHYSICAL}}&state={{oauth_state}}_physical&code_challenge={{oauth_code_challenge}}&code_challenge_method=S256" class="btn btn-light btn-lg">
+                Authenticate Physical Store with Etsy
+            </a>
+        </div>
+        <div class="section">
+            <h2 class="section-title">Web Scraper</h2>
+            <a href="/etsyWebScrapeUI" class="btn btn-info btn-lg">
+                Access Etsy Web Scraper
+            </a>
+        </div>
+    </div>
+    <!-- Add Bootstrap JavaScript and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+
+</html>

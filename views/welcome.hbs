@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Etsy API Connector - Welcome</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            padding: 2rem;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+        }
+        h1 {
+            margin-bottom: 2rem;
+        }
+        .btn {
+            margin: 0.5rem auto;
+        }
+        ol {
+            text-align: left;
+            list-style: none;
+            counter-reset: my-awesome-counter;
+            padding-left: 0;
+        }
+        ol > li {
+            counter-increment: my-awesome-counter;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid lightgrey;
+            padding-bottom: 1rem;
+            position: relative;
+            padding-left: 40px;
+        }
+        ol > li::before { /* This targets only direct children of the ordered list */
+            content: counter(my-awesome-counter);
+            color: white;
+            background: #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: -30px;
+        }
+        .action-step {
+            animation: pulse 1s 1;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0,123,255,.5); }
+            70% { box-shadow: 0 0 0 10px rgba(0,123,255,0); }
+            100% { box-shadow: 0 0 0 0 rgba(0,123,255,0); }
+        }
+        .form-custom {
+            padding-bottom: 1rem;
+            border-bottom: 1px solid lightgrey;
+            margin-bottom: 1rem;
+        }
+        p.success-message {
+            color: darkgreen;
+            font-size: 0.9rem;
+        }
+        p.warning-message {
+            color: orange;
+            font-size: 0.9rem;
+        }
+        p.failure-message {
+            color: darkred;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 9999; cursor: pointer;">
+        <div style="position: absolute; top: 50%; left: 50%; font-size: 50px; color: white; transform: translate(-50%,-50%);">
+            <i class="fa fa-spinner fa-spin"></i>
+        </div>
+    </div>
+    <div class="container">
+        <h1>Welcome, {{first_name_hbs}}!</h1>
+        <form action="/login" method="get" class="form-custom">
+            <input type="hidden" name="access_token" value="{{access_token_hbs}}" />
+            <input type="hidden" name="shop_id" value="{{shop_id_hbs}}" />
+            <input type="hidden" name="first_name" value="{{first_name_hbs}}" />
+            <button type="submit" class="btn btn-primary mb-2">Check Printful Login</button>
+            {{#if loginChecked}}
+                <p class="success-message">Login Checked</p>
+            {{/if}}
+        </form>
+        <ol>
+            <li class="action-step">
+                <p><b>Create Etsy draft listings</b> (using the file in the .csv folder)</p>
+                <form action="/createEtsyDrafts" method="post">
+                    <input type="hidden" name="access_token" value="{{access_token_hbs}}" />
+                    <input type="hidden" name="shop_id" value="{{shop_id_hbs}}" />
+                    <input type="hidden" name="first_name" value="{{first_name_hbs}}" />
+                    {{!-- <input type="file" name="csvfile" accept=".csv" required /> --}}
+                    <button type="submit" class="btn btn-primary mb-2">Create Etsy Drafts</button>
+                    {{#if csvErrors}}
+                        <p class="failure-message"><b>The following errors were found in the .csv file, please fix and try again:</b></p>
+                        {{#each csvErrors}}
+                            <p class="failure-message">{{this}}</p>
+                        {{/each}}
+                    {{/if}}
+                    {{#if catchErrorMessage}}
+                        <p class="failure-message"><b>There was a problem getting the Image IDs from Printful, check you're logged in and that all images are uploaded to Printful, and try again:</b></p>
+                        {{#each catchErrorMessage}}
+                            <p class="failure-message">{{this}}</p>
+                        {{/each}}
+                    {{/if}}
+                    {{#if catchErrorMessageEtsyDrafts}}
+                        <p class="failure-message"><b>There were errors creating the following draft listings on Etsy, please fix or remove these rows from the .csv file, then retry the automation.</b></p>
+                        {{#each catchErrorMessageEtsyDrafts}}
+                            <p class="failure-message">{{this}}</p>
+                        {{/each}}
+                    {{/if}}
+                    {{#if catchErrorMessageEtsyImageUploads}}
+                        <p class="failure-message"><b>There were errors uploading some images to Etsy, see below, you can continue with the automation if you want, as this doesn't affect Printful linking.</b></p>
+                        {{#each catchErrorMessageEtsyImageUploads}}
+                            <p class="failure-message">{{this}}</p>
+                        {{/each}}
+                    {{/if}}
+                    {{#if completedWithNoErrors}}
+                        <p class="success-message"><b>Successfully created all listings on Etsy with no errors.</b></p>
+                        <p class="success-message">Wait for Printful to finish synchronizing the data before starting the next step.</p>
+                    {{/if}}
+                    {{#if failedEtsyDraftCheck}}
+                        <p class="failure-message"><b>Unable to check that all created draft listings are showing on Etsy - please check manually and then manually refresh the Printful data.</b></p>
+                    {{/if}}
+                    {{#if printfulSyncFailed}}
+                        <p class="failure-message"><b>Unable to refresh the Printful data - please do this manually</b></p>
+                    {{/if}}
+                </form>
+            </li>
+            <li class="action-step">
+                <p><b>Link the Etsy listings to Printful</b> (using: /database/completeListingInfo.csv)</p>
+                <button id="sync-variant-button" class="btn btn-primary mb-2">Link Listings</button>
+                <p id="success-msg-csv" style="display: none" class="success-message"><b>Successfully updated .csv at ./database/completeListingInfo.csv</b></p>
+                <p id="failure-msg-printful" style="display: none" class="warning-message"><b>Any errors will be listed below:</b></p>
+                <ul id="printful-errors"></ul>
+            </li>
+            {{!-- <form action="/getAllEtsyListing" method="get" class="form-custom">
+                <input type="hidden" name="access_token" value="{{access_token_hbs}}" />
+                <input type="hidden" name="shop_id" value="{{shop_id_hbs}}" />
+                <button type="submit" class="btn btn-primary mb-2">get Etsy drafts listings</button>
+            </form> --}}
+        </ol>
+    </div>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('form').submit(function() {
+                $('#overlay').show();
+            });
+        });
+    </script>
+    <script>
+        document.getElementById('sync-variant-button').addEventListener('click', async function() {
+        $('#overlay').show();
+        let access_token = document.querySelector('input[name="access_token"]').value;
+        let shop_id = document.querySelector('input[name="shop_id"]').value;
+        let first_name = document.querySelector('input[name="first_name"]').value;
+
+        try {
+            const response = await fetch('/printful-sync-variants', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    access_token: access_token,
+                    shop_id: shop_id,
+                    first_name: first_name
+                })
+            });
+
+            const data = await response.json();
+
+            // Show/hide paragraphs based on the response data
+            document.getElementById('success-msg-csv').style.display = data.successfullyWrittenCsv ? 'block' : 'none';
+
+            // If there are printfulErrorsArray in response data
+            const printfulErrorsList = document.getElementById('printful-errors');
+            printfulErrorsList.innerHTML = '';
+            if (data.printfulErrorsArray) {
+                document.getElementById('failure-msg-printful').style.display = 'block';
+                data.printfulErrorsArray.forEach(error => {
+                    const li = document.createElement('p');
+                    li.textContent = error;
+                    li.classList.add('failure-message');
+                    printfulErrorsList.appendChild(li);
+                });
+            } else {
+                document.getElementById('failure-msg-printful').style.display = 'none';
+            }
+
+            $('#overlay').hide();
+
+        } catch (error) {
+            console.error('Error:', error);
+            $('#overlay').hide();
+        }
+        });
+    </script>
+</body>
+
+</html>

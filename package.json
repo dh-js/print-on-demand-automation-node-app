@@ -1,0 +1,45 @@
+{
+  "name": "podautomationapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "express": "4.x",
+    "form-data": "^4.0.0",
+    "hbs": "^4.1.2",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^2.6.1",
+    "puppeteer": "^20.7.4",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "engines": {
+    "node": ">=18.15.0"
+  },
+  "pkg": {
+    "scripts": ["*.js", "endpoints/*.js"],
+    "assets": [
+      "views/**/*",
+      "node_modules/@puppeteer/**/*",
+      "node_modules/puppeteer/**/*",
+      "node_modules/puppeteer-extra-plugin-stealth/**/*",
+      "node_modules/puppeteer-extra-plugin/**/*",
+      "node_modules/puppeteer-extra/**/*",
+      "node_modules/puppeteer-extra-plugin-user-data-dir/**/*",
+      "node_modules/puppeteer-extra-plugin-user-preferences/**/*",
+      "node_modules/vm2/**/*"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ]
+  },
+  "license": "MIT"
+}
