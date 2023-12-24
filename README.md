@@ -1,6 +1,6 @@
 # Etsy Scraper App
 
-This is a Node.js application that automates various tasks related to Etsy and Printful. It uses Puppeteer for web scraping and automation, Express for the server, and Handlebars for the user interface.
+This is a Node.js application that automates various parts of a client's workflow for running their Etsy and Printful print-on-demand ecommerce business. It interacts with the Etsy & Printful APIs, the user's file system and uses Puppeteer for web scraping and automation. Express is used for the server, Handlebars for the user interface, and PKG allows the client to run the app as a .exe file on their PC.
 
 ## Features
 
@@ -18,6 +18,8 @@ This is a Node.js application that automates various tasks related to Etsy and P
 
 - **Pinterest Endpoint**: The application has a Pinterest endpoint, which is handled by the `pinterestEndpoint.js` file.
 
+- **Midjourney Images Endpoint**: The application has an endpoint for handling midjourney images, which is handled by the `midjourneyImagesEndpoint.js` file.
+
 - **User Interface**: The application provides a simple user interface in the browser using Handlebars. After each operation is completed, a success message is displayed on the page.
 
 ## Running the App
@@ -25,6 +27,8 @@ This is a Node.js application that automates various tasks related to Etsy and P
 The application is started by running the `server.js` file. The server listens on port 3003 and automatically opens the application in the default web browser.
 
 The application can also be packaged into a portable executable file using PKG. This allows the client to run the app on their PC as needed.
+
+The application uses Puppeteer's stealth plugin to avoid being detected as a bot by Etsy. If too many requests are made, Etsy may temporarily block the application. In this case, the application will inform the user and stop the scraping process. Random delays are used to mimic human behavior and further avoid bot detection.
 
 ## Dependencies
 
@@ -43,4 +47,4 @@ The application uses the following dependencies:
 
 ## Note
 
-The application uses Puppeteer's stealth plugin to avoid being detected as a bot by Etsy. If too many requests are made, Etsy may temporarily block the application. In this case, the application will inform the user and stop the scraping process. Random delays are used to mimic human behavior and further avoid bot detection.
+No confidential information has been added to Github, all private information is stored in a .env file.
