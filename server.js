@@ -1,6 +1,7 @@
 require('dotenv').config();
 const path = require("path");
 const express = require('express');
+const hbs = require("hbs");
 const fetch = require("node-fetch");
 const fsPromises = require('fs').promises;
 const puppeteer = require('puppeteer-extra');
