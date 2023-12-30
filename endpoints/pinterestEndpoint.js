@@ -2,6 +2,7 @@ const express = require('express');
 const fetch = require("node-fetch");
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const router = express.Router();
+const fs = require('fs');
 
 const clientID = process.env.ETSY_CLIENT_ID_DIGITAL;
 
@@ -70,7 +71,24 @@ router.get('/', async (req, res) => {
             'Content-Type': 'application/json'
         },
     };
+
+    // Read the pinterest_description.txt file contents for creation of the Pinterest description later
+    let pinterestDescriptionFile;
+
+    if (fs.existsSync('pinterest_description.txt')) {
+        pinterestDescriptionFile = fs.readFileSync('pinterest_description.txt', 'utf8');
+        console.log(`Successfully using contents of pinterest_description.txt file`);
+    } else {
+        console.error('Unable to find pinterest_description.txt');
+        res.send('Unable to find pinterest_description.txt');
+        return;
+    }
     
+    if (!pinterestDescriptionFile) {
+        res.send('Unable to find pinterest_description.txt');
+    }
+    
+
     while (stayInLoop) {
         
         const listingsResponse = await fetch(
@@ -90,7 +108,7 @@ router.get('/', async (req, res) => {
                         mediaURL: result.videos[0].video_url,
                         pinterestBoard: shopCategoryTranslations[result.shop_section_id] ? shopCategoryTranslations[result.shop_section_id] : null,
                         thumbnail: '0:00',
-                        description: result.description,
+                        description: result.title + '\n\n' + pinterestDescriptionFile,
                         link: result.url,
                         publishDate: null,
                         keywords: result.tags.slice(0, 10).join(', ')
@@ -101,7 +119,7 @@ router.get('/', async (req, res) => {
                         mediaURL: result.images[0].url_fullxfull,
                         pinterestBoard: shopCategoryTranslations[result.shop_section_id] ? shopCategoryTranslations[result.shop_section_id] : null,
                         thumbnail: null,
-                        description: result.description,
+                        description: result.title + '\n\n' + pinterestDescriptionFile,
                         link: result.url,
                         publishDate: null,
                         keywords: result.tags.slice(0, 10).join(', ')

@@ -55,6 +55,12 @@ async function refreshTokens(refresh_token) {
 
 router.post('/', async (req, res) => {
 
+    const delay = (ms) => {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    };
+
+    const maxAPIAttempts = 3;
+
     const {shop_id, first_name, type_of_run} = req.body;
     let {refresh_token, access_token} = req.body;
 
@@ -77,37 +83,41 @@ router.post('/', async (req, res) => {
     //Get shop sections & section IDs first
     let shopSectionTranslations = {};
 
-    const requestOptionsSections = {
-        method: 'GET',
-        headers: {
-            'x-api-key': clientID,
-            Authorization: `Bearer ${access_token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        },
-    };
-        
-    const sectionsResponse = await fetch(
-        `https://openapi.etsy.com/v3/application/shops/${shop_id}/sections`,
-        requestOptionsSections
-        );
-    
-    //Creating the shopSectionTranslations object which has the shop section titles & the corresponding IDs
-    if (sectionsResponse.ok) {
-        let sectionsData = await sectionsResponse.json();
-        sectionsData.results.forEach(result => {
-            shopSectionTranslations[result.title] = result.shop_section_id;
-        });
-    } else {
-        const errorData = await sectionsResponse.json();
-        console.log('Error:', errorData);
-        res.send({message: "An error occurred while getting the shop sections", error: errorData});
-        return;
-    }
+    for (let attempt = 1; attempt <= maxAPIAttempts; attempt++) {
 
-    const delay = (ms) => {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    };
+        const requestOptionsSections = {
+            method: 'GET',
+            headers: {
+                'x-api-key': clientID,
+                Authorization: `Bearer ${access_token}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+        };
+            
+        const sectionsResponse = await fetch(
+            `https://openapi.etsy.com/v3/application/shops/${shop_id}/sections`,
+            requestOptionsSections
+            );
+        
+        //Creating the shopSectionTranslations object which has the shop section titles & the corresponding IDs
+        if (sectionsResponse.ok) {
+            let sectionsData = await sectionsResponse.json();
+            sectionsData.results.forEach(result => {
+                shopSectionTranslations[result.title] = result.shop_section_id;
+            });
+            break; //break out of the for loop if the response is ok
+        } else if (attempt === maxAPIAttempts) {
+            const errorData = await sectionsResponse.json();
+            console.log('Error on the 2nd attempt of getting the shop sections:', errorData);
+            res.send({message: "An error occurred on the 2nd attempt of getting the shop sections", error: errorData});
+            return;
+        } else {
+            console.log(`'Get shop sections' API attempt ${attempt} failed. Retrying...`);
+            await delay(5000);
+        }
+
+    }
 
     //Getting the .csv file from the .csv folder and assigning it to a variable
     const readFile = await (async () => {
@@ -275,6 +285,15 @@ router.post('/', async (req, res) => {
                         checkPathAndReportError(testVideoMockupFilePath, "video file", lineCount, csvErrorArray);
                         checkPathAndReportError(testDownloadablesFolderPath, "downloadable-files folder", lineCount, csvErrorArray);
                     }
+
+                    // if there is a value in the 'Digital Holiday' column then log which row it is and what the value is
+                    // if (row['Digital Holiday']) {
+                    //     console.log(`Row ${lineCount} has a value in the 'Digital Holiday' column: ${row['Digital Holiday']}`);
+                    // }
+                    // // if there is a value in the 'Digital Set Holiday' column then log which row it is and what the value is
+                    // if (row['Digital Set Holiday']) {
+                    //     console.log(`Row ${lineCount} has a value in the 'Digital Set Holiday' column: ${row['Digital Set Holiday']}`);
+                    // }
                 
                     //Now add all future required keys to the row
                     const additionalKeys = ["Draft Created On Etsy", "Listing ID", "Images Added On Etsy"].reduce((acc, key) => {
@@ -401,7 +420,7 @@ router.post('/', async (req, res) => {
             };
 
             if (section) {
-                requestBody.shop_section_id = section;
+                requestBodyDraftCreation.shop_section_id = section;
             }
 
             const requestOptionsDraftCreation = {
@@ -415,16 +434,27 @@ router.post('/', async (req, res) => {
                 body: JSON.stringify(requestBodyDraftCreation)
             };
 
-            const responseDraftCreation = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings`, requestOptionsDraftCreation);
-            //Saving the listing ID of the newly created draft listing so it can be used for adding the variations, or showing error
             let created_draft_listing_data;
-            if (responseDraftCreation.ok) {
-                created_draft_listing_data = await responseDraftCreation.json();
-            } else {
-                const errorData = await responseDraftCreation.json();
-                console.log('Error data:', errorData);
-                throw new Error(errorData.error);
+
+            for (let attempt = 1; attempt <= maxAPIAttempts; attempt++) {
+
+                const responseDraftCreation = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings`, requestOptionsDraftCreation);
+                //Saving the listing ID of the newly created draft listing so it can be used for adding the variations, or showing error
+
+                if (responseDraftCreation.ok) {
+                    created_draft_listing_data = await responseDraftCreation.json();
+                    break; //break out of the for loop if the response is ok
+                } else if (attempt === maxAPIAttempts) {
+                    const errorData = await responseDraftCreation.json();
+                    console.log(`Error on attempt ${attempt} of creating the draft listing for ${rowTitle}:`, errorData);
+                    throw new Error(errorData.error);
+                } else {
+                    console.log(`'Create Etsy draft' API attempt ${attempt} failed for listing ${rowTitle}. Retrying...`);
+                    await delay(5000);
+                }
+
             }
+
             let { listing_id } = created_draft_listing_data;
 
             //Now update the Holiday property///////////////////////////////
@@ -436,13 +466,13 @@ router.post('/', async (req, res) => {
 
             let holidayPropertyID = [];
             let holidayPropertyName = [];
-            if (isDigital && row['Digital Holiday']){
-                holidayPropertyID.push(holidays[row['Digital Holiday']]);
-                holidayPropertyName.push(row['Digital Holiday']);
+            if (isDigital && row['Digital Holiday'].trim()){
+                holidayPropertyID.push(holidays[row['Digital Holiday'].trim()]);
+                holidayPropertyName.push(row['Digital Holiday'].trim());
                 isThereAHolidayValueToSet = true;
-            } else if (isDigitalSet && row['Digital Set Holiday']){
-                holidayPropertyID.push(holidays[row['Digital Set Holiday']]);
-                holidayPropertyName.push(row['Digital Set Holiday']);
+            } else if (isDigitalSet && row['Digital Set Holiday'].trim()){
+                holidayPropertyID.push(holidays[row['Digital Set Holiday'].trim()]);
+                holidayPropertyName.push(row['Digital Set Holiday'].trim());
                 isThereAHolidayValueToSet = true;
             };
 
@@ -460,13 +490,23 @@ router.post('/', async (req, res) => {
                         values: holidayPropertyName
                     })
                 };
-                const responseAddProperty = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings/${listing_id}/properties/${property_id}`, requestOptionsAddProperty);
 
-                if (responseAddProperty.ok) {
-                    let resultFromAddingProperty = await responseAddProperty.json();
-                } else {
-                    const errorData = await responseAddProperty.json();
-                    throw new Error(errorData.error);
+                for (let attempt = 1; attempt <= maxAPIAttempts; attempt++) {
+
+                    const responseAddProperty = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings/${listing_id}/properties/${property_id}`, requestOptionsAddProperty);
+
+                    if (responseAddProperty.ok) {
+                        let resultFromAddingProperty = await responseAddProperty.json();
+                        break; //break out of the for loop if the response is ok
+                    } else if (attempt === maxAPIAttempts){
+                        const errorData = await responseAddProperty.json();
+                        console.log(`Error on attempt ${attempt} of setting the 'Holiday' value for listing ${rowTitle}:`, errorData);
+                        throw new Error(errorData.error);
+                    } else {
+                        console.log(`Error on attempt ${attempt} of setting the 'Holiday' value for listing ${rowTitle}. Retrying...`);
+                        await delay(5000);
+                    }
+
                 }
             };
 
@@ -485,7 +525,7 @@ router.post('/', async (req, res) => {
             rowsArrayAfterEtsyDraftCreation.push(row);
 
         } catch (error) {
-            console.log(`Error in catch block:`);
+            console.log(`Logging in catch block of the 'create Etsy draft' function:`);
             console.log(error);
             logErrorEtsyDraftCreation(error, row, productType);
         }
@@ -498,7 +538,7 @@ router.post('/', async (req, res) => {
 
     //Function for logging errors
     const logErrorEtsyDraftCreation = (error, row, productType) => {
-        console.log(`Error in function:`);
+        console.log(`Error in etsy drafy creation function:`);
         console.log(error);
         const errorMessage = `Error creating ${productType} listing for ${row[`${productType} Product Title`]}: ${error.message}`;
         etsyListingCreationErrorsArray.push(errorMessage);
@@ -625,23 +665,32 @@ router.post('/', async (req, res) => {
                     formData.append('rank', imageUploadCounter);
                     formData.append('overwrite', 'true');
 
-                    const imageUploadResponse = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings/${image_upload_listing_id}/images`, {
-                        method: 'POST',
-                        headers: {
-                            'x-api-key': clientID,
-                            Authorization: `Bearer ${access_token}`,
-                            ...formData.getHeaders()
-                        },
-                        body: formData,
-                    });
+                    for (let attempt = 1; attempt <= maxAPIAttempts; attempt++) {
 
-                    let currentImage = "image " + imageUploadCounter.toString();
-                    if (imageUploadResponse.ok) {
-                        const json = await imageUploadResponse.json();
-                    } else {
-                        const errorData = await imageUploadResponse.json();
-                        throw new Error(errorData.error);
-                    }
+                        const imageUploadResponse = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings/${image_upload_listing_id}/images`, {
+                            method: 'POST',
+                            headers: {
+                                'x-api-key': clientID,
+                                Authorization: `Bearer ${access_token}`,
+                                ...formData.getHeaders()
+                            },
+                            body: formData,
+                        });
+
+                        let currentImage = "image " + imageUploadCounter.toString();
+                        if (imageUploadResponse.ok) {
+                            const json = await imageUploadResponse.json();
+                            break; //break out of the for loop if the response is ok
+                        } else if (attempt === maxAPIAttempts) {
+                            const errorData = await imageUploadResponse.json();
+                            console.log(`Error on API attempt ${attempt} of ${currentImage} in ${imageFolderName}:`, errorData);
+                            throw new Error(errorData.error);
+                        } else {
+                            console.log(`Error on API attempt ${attempt} of ${currentImage} in ${imageFolderName}. Retrying...`);
+                            await delay(5000);
+                        }
+
+                    }    
                 } catch (error) {
                     etsyImageUploadErrorsArray.push(`Error uploading image ${photoFilesArray[i]} to listing ${image_upload_listing_id}: ${error.message}`);
                 }
@@ -662,23 +711,30 @@ router.post('/', async (req, res) => {
                 videoFormData.append('video', videoFileData, videoFileName);
                 videoFormData.append('name', videoFileName);
 
-                const videoUploadResponse = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings/${image_upload_listing_id}/videos`, {
-                    method: 'POST',
-                    headers: {
-                        'x-api-key': clientID,
-                        Authorization: `Bearer ${access_token}`,
-                        ...videoFormData.getHeaders()
-                    },
-                    body: videoFormData,
-                });
+                for (let attempt = 1; attempt <= maxAPIAttempts; attempt++) {
 
-                if (videoUploadResponse.ok) {
-                    const json = await videoUploadResponse.json();
-                } else {
-                    const errorData = await videoUploadResponse.json();
-                    console.log('1st log of Error Data:', errorData);
-                    throw new Error(errorData.error);
-                    //throw new Error('A valid name must be provided with a new video file.');
+                    const videoUploadResponse = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings/${image_upload_listing_id}/videos`, {
+                        method: 'POST',
+                        headers: {
+                            'x-api-key': clientID,
+                            Authorization: `Bearer ${access_token}`,
+                            ...videoFormData.getHeaders()
+                        },
+                        body: videoFormData,
+                    });
+
+                    if (videoUploadResponse.ok) {
+                        const json = await videoUploadResponse.json();
+                        break; //break out of the for loop if the response is ok
+                    } else if (attempt === maxAPIAttempts) {
+                        const errorData = await videoUploadResponse.json();
+                        console.log(`Error on API attempt ${attempt} of ${videoFileName}:`, errorData);
+                        throw new Error(errorData.error);
+                    } else {
+                        console.log(`Error on API attempt ${attempt} of ${videoFileName}. Retrying...`);
+                        await delay(5000);
+                    }
+
                 }
 
             } catch (error) {
@@ -720,23 +776,33 @@ router.post('/', async (req, res) => {
                         downloadableFileFormData.append('file', downloadableFileData, downloadableFilesArray[i]);
                         downloadableFileFormData.append('name', downloadableFilesArray[i]);
                         downloadableFileFormData.append('rank', downloadableImageCounter);
+
+                        for (let attempt = 1; attempt <= maxAPIAttempts; attempt++) {
     
-                        const downloadableFileUploadResponse = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings/${image_upload_listing_id}/files`, {
-                            method: 'POST',
-                            headers: {
-                                'x-api-key': clientID,
-                                Authorization: `Bearer ${access_token}`,
-                                ...downloadableFileFormData.getHeaders()
-                            },
-                            body: downloadableFileFormData,
-                        });
-    
-                        if (downloadableFileUploadResponse.ok) {
-                            const json = await downloadableFileUploadResponse.json();
-                        } else {
-                            const errorData = await downloadableFileUploadResponse.json();
-                            throw new Error(errorData.error);
+                            const downloadableFileUploadResponse = await fetch(`https://openapi.etsy.com/v3/application/shops/${shop_id}/listings/${image_upload_listing_id}/files`, {
+                                method: 'POST',
+                                headers: {
+                                    'x-api-key': clientID,
+                                    Authorization: `Bearer ${access_token}`,
+                                    ...downloadableFileFormData.getHeaders()
+                                },
+                                body: downloadableFileFormData,
+                            });
+        
+                            if (downloadableFileUploadResponse.ok) {
+                                const json = await downloadableFileUploadResponse.json();
+                                break; //break out of the for loop if the response is ok
+                            } else if (attempt === maxAPIAttempts) {
+                                const errorData = await downloadableFileUploadResponse.json();
+                                console.log(`Error on API attempt ${attempt} for file number ${downloadableImageCounter} in ${imageFolderName}:`, errorData);
+                                throw new Error(errorData.error);
+                            } else {
+                                console.log(`Error on API attempt ${attempt} for file number ${downloadableImageCounter} in ${imageFolderName}. Retrying...`);
+                                await delay(5000);
+                            }
+
                         }
+
                     } catch (error) {
                         etsyImageUploadErrorsArray.push(`Error uploading downloadable file ${downloadableFilesArray[i]} to listing ${image_upload_listing_id}: ${error.message}`);
                     }
