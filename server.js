@@ -17,6 +17,7 @@ const etsyScraperEndpoint = require('./endpoints/etsyScraperEndpoint');
 const cleanseTextfileEndpoint = require('./endpoints/cleanseTextfileEndpoint');
 const midjourneyImagesEndpoint = require('./endpoints/midjourneyImagesEndpoint');
 const pinterestEndpoint = require('./endpoints/pinterestEndpoint');
+const etsyScraperViaAPIEndpoint = require('./endpoints/etsyScraperViaAPI');
 
 const app = express();
 const { exec } = require('child_process');
@@ -24,6 +25,7 @@ const { count } = require("console");
 app.set("view engine", "hbs");
 app.set("views", path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
+app.use('/assets', express.static('./assets'));
 
 app.use('/createEtsyDrafts', createEtsyDraftsShirtSweat);
 app.use('/printful-sync-variants', printfulSyncVariantsShirtSweat);
@@ -33,6 +35,7 @@ app.use('/etsyScraperEndpoint', etsyScraperEndpoint);
 app.use('/cleanseTextfileEndpoint', cleanseTextfileEndpoint);
 app.use('/midjourneyImagesEndpoint', midjourneyImagesEndpoint);
 app.use('/pinterestEndpoint', pinterestEndpoint);
+app.use('/etsyScraperViaAPI', etsyScraperViaAPIEndpoint);
 
 //OAUTH Values
 const base64URLEncode = (str) =>
@@ -215,6 +218,8 @@ app.get("/welcome_digital", async (req, res) => {
         console.log(errorDataMe);
         res.send("Error getting shop ID")
     }
+
+    console.log("shop ID: " + shopID);
 
 
     res.render("welcomeDigital", {
