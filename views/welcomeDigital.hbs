@@ -182,6 +182,28 @@
                 {{/if}}
             </form>
         </ol>
+        <hr>
+        <ol class="action-step">
+            <h3>Etsy Web Scraper (Via API)</h3>
+            <p>To get the Shop ID, visit the shop and hover over the 'contact' button. Then see in the bottom left:</p>
+            <img src="/assets/SHOPIDEXAMPLE.png" alt="Shop ID Example" style="margin-bottom: 20px;">
+            <form action="/etsyScraperViaAPI" method="post" id="etsyFormViaAPI" class="form-custom text-center">
+                <textarea name="urls" class="form-control mb-2" style="width: 100%;" rows="8" placeholder="Shop ID, Section Name (one per line)" required></textarea>
+                <input type="hidden" name="access_token" value="{{access_token_hbs}}" />
+                <input type="hidden" name="refresh_token" value="{{refresh_token_hbs}}" />
+                <input type="hidden" name="shop_id" value="{{shop_id_hbs}}" />
+                <input type="hidden" name="first_name" value="{{first_name_hbs}}" />
+                <input type="hidden" name="scrapeButtonType" id="scrapeButtonTypeViaAPI" value="" />
+                {{!-- <input type="file" name="csvfile" accept=".csv" required /> --}}
+                <button type="button" class="btn btn-primary btn-lg mb-2" id="scrapebuttonViaAPI1">Scrape All Pages</button>
+                <button type="button" class="btn btn-secondary btn-lg mb-2" id="scrapebuttonViaAPI2">Scrape Single Page</button>
+                {{#if completedScrapeAPI}}
+                    <div class="alert alert-success mt-3" role="alert">
+                        API Scrape successfully completed!
+                    </div>
+                {{/if}}
+            </form>
+        </ol>
     </div>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
@@ -192,6 +214,19 @@
             $('form').submit(function() {
                 $('#overlay').show();
             });
+        });
+    </script>
+    <script>
+        document.getElementById('scrapebuttonViaAPI1').addEventListener('click', function() {
+            document.getElementById('scrapeButtonTypeViaAPI').value = 'scrapebuttonallpages';
+            $('#overlay').show();
+            document.getElementById('etsyFormViaAPI').submit();
+        });
+
+        document.getElementById('scrapebuttonViaAPI2').addEventListener('click', function() {
+            document.getElementById('scrapeButtonTypeViaAPI').value = 'scrapebuttonsinglepage';
+            $('#overlay').show();
+            document.getElementById('etsyFormViaAPI').submit();
         });
     </script>
     <script>

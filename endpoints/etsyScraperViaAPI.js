@@ -1,129 +1,137 @@
+const csv = require("csv-parser");
 const express = require('express');
-const fetch = require("node-fetch");
-const fs = require('fs');
-const path = require('path');
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const fs = require('fs'); 
+const fsPromises = require('fs').promises;
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const FormData = require('form-data');
 const router = express.Router();
+const axios = require('axios');
+const url = require('url');
+const path = require('path');
+const fetch = require("node-fetch");
 
-puppeteer.use(StealthPlugin());
+const clientID = process.env.ETSY_CLIENT_ID_DIGITAL;
 
-router.post('/', async function(req, res) {
-    var urls = req.body.urls.split('\n');
-    var buttonType = req.body.scrapeButtonType;
-
-    let scrapeSinglePage = false;
-    if (buttonType === 'scrapebuttonsinglepage') {
-        scrapeSinglePage = true;
-    }
-
-    var allScrapedListings = [];
-
-    console.log("Starting Etsy Scraping Via API.")
-
-    browser = await puppeteer.launch({
-        //executablePath: './chromium/puppeteer/chrome/win64-114.0.5735.133/chrome-win64/chrome.exe',
-        executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe',
-        headless: false,
-        //headless: "new"
-        //userDataDir: 'C:/Users/David/AppData/Local/Google/Chrome/User Data/'
+async function refreshTokens(refresh_token) {
+    
+    const response = await fetch('https://api.etsy.com/v3/public/oauth/token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `grant_type=refresh_token&client_id=${clientID}&refresh_token=${refresh_token}`
     });
 
-    const page = await browser.newPage();
-    // Read the cookies from the file
-    const cookiesString = fs.readFileSync('./cookies.txt', 'utf8');
-    // Parse the cookies into an array
-    const cookies = JSON.parse(cookiesString);
-    // Use the cookies in Puppeteer
-    await page.setCookie(...cookies);
-    //await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36');
-
-    let isFirstIteration = true;
-
-    for (let url of urls) {
-        let pageCounter = 1;
-        let listings = [];
-        let isFullPage = true;
-    
-        while (isFullPage) {
-            let pageUrl = url + (pageCounter > 1 ? `&page=${pageCounter}#items` : '');
-            await page.goto(pageUrl, {waitUntil: 'networkidle0'});
-            // Random pause for bot safety
-            await page.waitForTimeout(Math.floor(Math.random() * 10000) + 10000);
-
-            //Captcha check
-            try {
-                // Wait for the iframe to load
-                await page.waitForSelector('iframe[src*="captcha-delivery.com"]', { timeout: 10000 });
-                const iframeElement = await page.$('iframe[src*="captcha-delivery.com"]');
-                const frame = await iframeElement.contentFrame();
-            
-                // Wait for the captcha container to appear within the iframe
-                await frame.waitForSelector('#captcha-container', { timeout: 10000 });
-                const captchaContainer = await frame.$('#captcha-container');
-                if (captchaContainer) {
-                    console.log("Captcha is being displayed.");
-                    await page.waitForTimeout(30000);
-                } else {
-                    console.log("Captcha is not being displayed.");
-                }
-            } catch (error) {
-                console.log("Captcha container did not appear within the timeout period.");
-            }
-    
-            if (isFirstIteration) {
-                try {
-                    await page.waitForTimeout(Math.floor(Math.random() * 10000) + 10000);
-            
-                    // Attempt to close the cookie popup
-                    await page.waitForSelector('button[data-gdpr-single-choice-accept="true"]', { timeout: 10000 });
-                    await page.click('button[data-gdpr-single-choice-accept="true"]');
-                    await page.waitForTimeout(Math.floor(Math.random() * 10000) + 10000);
-                } catch (error) {
-                    console.log("Cookie popup did not appear");
-                }
-                isFirstIteration = false;
-            }
-            
-            // Random pause for bot saftey
-            let delay = Math.floor(Math.random() * 15000) + 20000;
-
-            await new Promise(resolve => setTimeout(resolve, delay));
-    
-            let pageListings = await page.$$eval('.js-merch-stash-check-listing.v2-listing-card', elements => elements.map(item => {
-                let titleElement = item.querySelector('.v2-listing-card__info h3');
-                let title = titleElement ? titleElement.textContent.trim() : 'No title found';
-                let imgElement = item.querySelector('.placeholder-content img');
-                let imgSrcset = imgElement ? imgElement.srcset : 'No image found';
-                let imgUrl = imgSrcset.split(', ').pop().split(' ')[0];
-                return { title, imgUrl };
-            }));
-    
-            listings.push(...pageListings);
-    
-            // Check if the page is full
-            isFullPage = pageListings.length >= 36;
-            //If the button type is scrape single page, then only scrape the first page
-            if (scrapeSinglePage) {
-                isFullPage = false;
-                console.log("Scraped first page only.")
-            } else {
-                console.log("Scraped page " + pageCounter);
-            }
-
-            pageCounter++;
-        }
-
-        if (scrapeSinglePage === false) {
-            console.log("Scraped all pages.")
-        }
-    
-        allScrapedListings.push(...listings);
+    if (!response.ok) {
+        throw new Error(`Error getting refresh token: ${response.status}`);
     }
 
-    //await browser.close();
+    const data = await response.json();
 
-    console.log(allScrapedListings.length + " listings scraped.");
+    return {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token
+    };
+}
+
+async function getApiCall(_url, _clientID, _accessToken, retries = 3) {
+    try {
+        const response = await axios.get(`${_url}`, {
+            headers: {
+                'x-api-key': _clientID,
+                Authorization: `Bearer ${_accessToken}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error(`Failed API call for ${url}: ${error}`);
+        if (retries > 0) {
+            console.log(`Retrying API call for ${url}, (${retries} attempts left)...`);
+            return getApiCall(url, _clientID, _accessToken, retries - 1);
+        } else {
+            console.error(`No more retries left for ${url}`);
+            return null;
+        }
+    }
+}
+
+// let sections_url = `https://openapi.etsy.com/v3/application/shops/${shop_id_for_test}/sections`
+    // let sectionsResponse = await getApiCall(sections_url, clientID, access_token);
+    // let shopSectionTranslations = {};
+    // if (sectionsResponse) { 
+    //     sectionsResponse.results.forEach(result => {
+    //         shopSectionTranslations[result.title] = result.shop_section_id;
+    //     });
+    // }
+    // console.log(shopSectionTranslations);
+    // res.send(`<pre>${JSON.stringify(sectionsResponse, null, 2)}</pre>`);
+    // return;
+
+router.post('/', async (req, res) => {
+
+    const delay = (ms) => {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    };
+
+    const {shop_id, first_name, scrapeButtonType} = req.body;
+    let {refresh_token, access_token} = req.body;
+
+    let user_provided_shop_id = 45428491;
+    let user_provided_section_url = 'https://www.etsy.com/uk/shop/TumblerVilleUSA?ref=l2-about-shopname&section_id=44523445';
+    let parsedSectionUrl = new url.URL(user_provided_section_url);
+    let user_provided_section_id = parsedSectionUrl.searchParams.get('section_id');
+    console.log(`Section ID: ${user_provided_section_id}`);
+
+    let allListingData = [];
+    let all_listings_api_url = `https://openapi.etsy.com/v3/application/shops/${user_provided_shop_id}/listings/active?limit=100`;
+    let getListingsResponse;
+    try {
+        let page_offset = 0;
+        while (true) {
+            getListingsResponse = await getApiCall(all_listings_api_url + `&offset=${page_offset}`, clientID, access_token);
+
+            //***If we're not limiting it by section then push all listing ids */
+            const listingData = getListingsResponse.results.map(listing => (
+                {
+                    listingID: listing.listing_id,
+                    title: listing.title
+                }
+            ));
+            allListingData.push(...listingData);
+            // Otherwise only push listing ids that are in the correct section
+            /////////
+
+            if (getListingsResponse.results.length < 100) {
+                break;
+            }
+
+            page_offset += 100;
+        }
+    } catch (error) {
+        console.error(`Failed to fetch all listings at page offset ${page_offset}: ${error}`);
+    }
+
+    // res.send(`<pre>${JSON.stringify(allListingData, null, 2)}</pre>`);
+    // return;
+
+    console.log(`allListingData.length: ${allListingData.length}`);
+
+    // Now for each listing, get the image url
+    let getImagesResponse;
+    for (let listing of allListingData) {
+        let indiv_listing_api_url = `https://openapi.etsy.com/v3/application/listings/${listing.listingID}/images`;
+        getImagesResponse = await getApiCall(indiv_listing_api_url, clientID, access_token);
+        listing.imageURL = getImagesResponse.results[0].url_fullxfull;
+        // rate limiting
+        await delay(500);
+    }
+
+    // res.send(`<pre>${JSON.stringify(allListingData, null, 2)}</pre>`);
+    // return;
+
+    ////// So now allListingData is an array of objects with listingID, title, and imageURL //////
 
     function getFormattedDate() {
         const now = new Date();
@@ -145,21 +153,20 @@ router.post('/', async function(req, res) {
     }
 
     // Function to download image
-    async function downloadImage(url, filePath) {
+    async function downloadImage(url, filePath, retries = 3) {
         try {
-            const response = await fetch(url);
-            if (response.ok) {
-                const buffer = await response.buffer();
-                if (buffer.byteLength > 0) { // Check if buffer is not empty
-                    await fs.promises.writeFile(filePath, buffer);
-                } else {
-                    console.error(`Received empty data. URL: ${url}, Filename: ${filePath}`);
-                }
+            const response = await axios.get(url, { responseType: 'arraybuffer' });
+            if (response.data.byteLength > 0) {
+                await fs.promises.writeFile(filePath, response.data);
             } else {
-                console.error(`Failed to download image. URL: ${url}, Filename: ${filePath}, Status: ${response.status}`);
+                throw new Error(`Received empty data. URL: ${url}, Filename: ${filePath}`);
             }
         } catch (error) {
-            console.error(`Failed to download image. URL: ${url}, Filename: ${filePath}, Error: ${error}`);
+            console.error(`Error: ${error}`);
+            if (retries > 0) {
+                console.log(`Retrying download for ${url}, (${retries} attempts left)...`);
+                return downloadImage(url, filePath, retries - 1);
+            }
         }
     }
 
@@ -169,8 +176,8 @@ router.post('/', async function(req, res) {
         let currentSubDir = '';
         let currentSubDirName = '';
         for (let i = 0; i < listings.length; i++) {
-            // Check if both title and imgUrl exist
-            if (listings[i].title && listings[i].imgUrl) {
+            // Check if both title and imageURL exist
+            if (listings[i].title && listings[i].imageURL) {
                 // Create a new subdirectory for every hundred images
                 const subDirName = `${Math.floor(i / 108) + 1}`;
                 const subDir = `${mainDirectory}/${subDirName}`;
@@ -188,17 +195,26 @@ router.post('/', async function(req, res) {
                 }
     
                 const titleWords = listings[i].title.replace(/[^a-z0-9 ]/gi, '').split(' ').slice(0, 3).join('_');
-                const filename = `${i + 1}_${titleWords}.jpg`;
-                await downloadImage(listings[i].imgUrl, path.join(subDir, filename));
+                //const filename = `${i + 1}_${titleWords}.jpg`;
+                // Create image file name and skip number 69
+                let filename;
+                i < 68 ? filename = `${i + 1}_${titleWords}.jpg` : filename = `${i + 2}_${titleWords}.jpg`;
+                await downloadImage(listings[i].imageURL, path.join(subDir, filename));
                 
                 // A random pause for bot safety
                 let delay = Math.floor(Math.random() * 5000) + 1000;
                 await new Promise(resolve => setTimeout(resolve, delay));
 
                 // Add title to text file content
-                textFileContent += `${i + 1}. ${listings[i].title}\n`;
+                // Skipping number 69
+                i < 68 ? textFileContent += `${i + 1}. ${listings[i].title}\n` : textFileContent += `${i + 2}. ${listings[i].title}\n`;
+                //textFileContent += `${i + 1}. ${listings[i].title}\n`;
             } else {
-                console.error(`Failed to download image ${i + 1}. URL: ${listings[i].imgUrl}, Filename: ${listings[i].title}`);
+                if (i < 68) {
+                    console.error(`Failed to download image ${i + 1}. URL: ${listings[i].imageURL}, Filename: ${listings[i].title}`);
+                } else {
+                    console.error(`Failed to download image ${i + 2}. URL: ${listings[i].imageURL}, Filename: ${listings[i].title}`);
+                }
             }
         }
     
@@ -209,13 +225,25 @@ router.post('/', async function(req, res) {
     }
 
     // Call the function
-    await downloadAllImages(allScrapedListings).catch(console.error);
+    await downloadAllImages(allListingData).catch(console.error);
+    
+    console.log(`Scraping process complete`);
 
-    console.log("Finished Etsy Scraping.")
-
-    res.render("etsyWebScrapeUI", {
-        completedScrape: true
-    });
+    // if (etsyImageUploadErrorsArray.length > 0) {
+    //     res.render("welcomeDigital", {
+    //         first_name_hbs: first_name,
+    //         shop_id_hbs: shop_id,
+    //         access_token_hbs: access_token,
+    //         catchErrorMessageEtsyImageUploads: etsyImageUploadErrorsArray
+    //     });
+    // } else {
+        res.render("welcomeDigital", {
+            first_name_hbs: first_name,
+            shop_id_hbs: shop_id,
+            access_token_hbs: access_token,
+            completedScrapeAPI: true
+        });
+    // }
 
 });
 

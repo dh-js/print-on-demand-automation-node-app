@@ -931,6 +931,7 @@ router.post('/', async (req, res) => {
             first_name_hbs: first_name,
             shop_id_hbs: shop_id,
             access_token_hbs: access_token,
+            refresh_token_hbs: refresh_token,
             catchErrorMessageEtsyImageUploads: etsyImageUploadErrorsArray
         });
     } else {
@@ -938,6 +939,7 @@ router.post('/', async (req, res) => {
             first_name_hbs: first_name,
             shop_id_hbs: shop_id,
             access_token_hbs: access_token,
+            refresh_token_hbs: refresh_token,
             completedWithNoErrors: true
         });
     }

@@ -219,9 +219,6 @@ app.get("/welcome_digital", async (req, res) => {
         res.send("Error getting shop ID")
     }
 
-    console.log("shop ID: " + shopID);
-
-
     res.render("welcomeDigital", {
         first_name_hbs: firstName,
         shop_id_hbs: shopID,
