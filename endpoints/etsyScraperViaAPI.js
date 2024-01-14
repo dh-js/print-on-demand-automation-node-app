@@ -75,63 +75,114 @@ router.post('/', async (req, res) => {
         return new Promise(resolve => setTimeout(resolve, ms));
     };
 
+    console.log(`Scraping process started`)
+
     const {shop_id, first_name, scrapeButtonType} = req.body;
     let {refresh_token, access_token} = req.body;
+    var user_submitted_lines = req.body.textInput.split('\n');
 
-    let user_provided_shop_id = 45428491;
-    let user_provided_section_url = 'https://www.etsy.com/uk/shop/TumblerVilleUSA?ref=l2-about-shopname&section_id=44523445';
-    let parsedSectionUrl = new url.URL(user_provided_section_url);
-    let user_provided_section_id = parsedSectionUrl.searchParams.get('section_id');
-    console.log(`Section ID: ${user_provided_section_id}`);
+    if (scrapeButtonType === 'scrapebuttonsspecificsection') {
+        console.log(`Scraping specific section/s`);
+    } else {
+        console.log(`Scraping entire shop/s`);
+    }
 
     let allListingData = [];
-    let all_listings_api_url = `https://openapi.etsy.com/v3/application/shops/${user_provided_shop_id}/listings/active?limit=100`;
-    let getListingsResponse;
-    try {
-        let page_offset = 0;
-        while (true) {
-            getListingsResponse = await getApiCall(all_listings_api_url + `&offset=${page_offset}`, clientID, access_token);
 
-            //***If we're not limiting it by section then push all listing ids */
-            const listingData = getListingsResponse.results.map(listing => (
-                {
-                    listingID: listing.listing_id,
-                    title: listing.title
-                }
-            ));
-            allListingData.push(...listingData);
-            // Otherwise only push listing ids that are in the correct section
-            /////////
+    for (let row of user_submitted_lines) {
 
-            if (getListingsResponse.results.length < 100) {
-                break;
+        let startingLength = allListingData.length;
+
+        let splitRow = row.split(',');
+        let user_provided_shop_id = splitRow[0];
+        let user_provided_section_id;
+
+        // Get the section ID
+        if (scrapeButtonType === 'scrapebuttonsspecificsection') {
+            let user_provided_section_url = splitRow[1];
+            if (user_provided_section_url === undefined) {
+                // Handle the error here
+                console.error('No section URL provided');
+                console.log(row);
+                res.status(400).send('No section URL provided');
+                return;
+            } else {
+                let parsedSectionUrl = new url.URL(user_provided_section_url);
+                user_provided_section_id = parsedSectionUrl.searchParams.get('section_id');
             }
-
-            page_offset += 100;
         }
-    } catch (error) {
-        console.error(`Failed to fetch all listings at page offset ${page_offset}: ${error}`);
+
+        // Just an exit if the user provided a section id but clicked the wrong button
+        if (scrapeButtonType === 'scrapebuttonentireshop') {
+            let user_provided_section_url = splitRow[1];
+            if (user_provided_section_url !== undefined) {
+                console.error('Section URL provided when scraping entire shop. Did you mean to select "Scrape Specific Section"?');
+                console.log(row);
+                res.status(400).send('Section URL provided when scraping entire shop. Did you mean to select "Scrape Specific Section"?');
+                return;
+            }
+        }
+
+        let all_listings_api_url = `https://openapi.etsy.com/v3/application/shops/${user_provided_shop_id}/listings/active?limit=100`;
+        let getListingsResponse;
+        try {
+            let page_offset = 0;
+            while (true) {
+                getListingsResponse = await getApiCall(all_listings_api_url + `&offset=${page_offset}`, clientID, access_token);
+
+                // If we're not limiting it by section then push all listing ids
+                if (scrapeButtonType !== 'scrapebuttonsspecificsection') {
+                    const listingData = getListingsResponse.results.map(listing => (
+                        {
+                            listingID: listing.listing_id,
+                            title: listing.title
+                        }
+                    ));
+                    allListingData.push(...listingData);
+                } else {
+                    // Otherwise only push listing ids that are in the correct section
+                    const listingData = getListingsResponse.results
+                        .filter(listing => listing.shop_section_id == user_provided_section_id)
+                        .map(listing => (
+                            {
+                                listingID: listing.listing_id,
+                                title: listing.title
+                            }
+                        ));
+                    allListingData.push(...listingData);
+                }
+
+                if (getListingsResponse.results.length < 100) {
+                    break;
+                }
+
+                page_offset += 100;
+            }
+        } catch (error) {
+            console.error(`Failed to fetch all listings at page offset ${page_offset}: ${error}`);
+        }
+
+        console.log(`Found ${allListingData.length - startingLength} matching listings for: ${row}`);
+        // res.send(`<pre>${JSON.stringify(allListingData, null, 2)}</pre>`);
+        // return;
+
+        // Now for each listing, get the image url
+        let getImagesResponse;
+        for (let listing of allListingData) {
+            let indiv_listing_api_url = `https://openapi.etsy.com/v3/application/listings/${listing.listingID}/images`;
+            getImagesResponse = await getApiCall(indiv_listing_api_url, clientID, access_token);
+            listing.imageURL = getImagesResponse.results[0].url_fullxfull;
+            // rate limiting
+            await delay(500);
+        }
+
+        // res.send(`<pre>${JSON.stringify(allListingData, null, 2)}</pre>`);
+        // return;
+
     }
-
-    // res.send(`<pre>${JSON.stringify(allListingData, null, 2)}</pre>`);
-    // return;
-
-    console.log(`allListingData.length: ${allListingData.length}`);
-
-    // Now for each listing, get the image url
-    let getImagesResponse;
-    for (let listing of allListingData) {
-        let indiv_listing_api_url = `https://openapi.etsy.com/v3/application/listings/${listing.listingID}/images`;
-        getImagesResponse = await getApiCall(indiv_listing_api_url, clientID, access_token);
-        listing.imageURL = getImagesResponse.results[0].url_fullxfull;
-        // rate limiting
-        await delay(500);
-    }
-
-    // res.send(`<pre>${JSON.stringify(allListingData, null, 2)}</pre>`);
-    // return;
 
     ////// So now allListingData is an array of objects with listingID, title, and imageURL //////
+    console.log('Starting image download process')
 
     function getFormattedDate() {
         const now = new Date();
