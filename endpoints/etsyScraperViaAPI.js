@@ -185,11 +185,18 @@ router.post('/', async (req, res) => {
                         ));
                         currentRowListingData.push(...listingData);
                 } else if (scrapeButtonType === 'scrapebuttonphrase') {
+                    // Split the phrase into words
+                    const phrase_words = user_provided_phrase.split(' ');
                     // Only push listing ids that have the correct phrase in the title
                     const listingData = getListingsResponse.results
                     // res.send(`<pre>${JSON.stringify(listingData, null, 2)}</pre>`);
                     // return;
-                    .filter(listing => listing.title.toLowerCase().includes(user_provided_phrase))
+                        .filter(listing => {
+                            // Remove anything that isn't a letter, number, or space from the title and split it into words
+                            const titleWords = listing.title.toLowerCase().replace(/[^a-z0-9 ]/g, "").split(' ');
+                            // Check if all words are included in the title
+                            return phrase_words.every(word => titleWords.includes(word));
+                        })
                         .map(listing => (
                             {
                                 listingID: listing.listing_id,
