@@ -199,6 +199,10 @@
                     <label for="limit_results">Only get the first X listings per line</label>
                     <input type="number" id="limit_results" name="limit_results" min="1" max="100" required />
                 </div>
+                <div>
+                    <input type="checkbox" id="removeFinalWord" name="remove_final_word" value="true">
+                    <label for="removeFinalWord">Remove final word from titles</label>
+                </div>
                 <button type="button" class="btn btn-primary btn-lg mb-2" id="scrapebuttonViaAPI1">Scrape Entire Shop</button>
                 <button type="button" class="btn btn-primary btn-lg mb-2" id="scrapebuttonViaAPI2">Scrape Shop Section</button>
                 <button type="button" class="btn btn-primary btn-lg mb-2" id="scrapebuttonViaAPI3">Scrape Shop for Phrase</button>

@@ -83,7 +83,7 @@ router.post('/', async (req, res) => {
 
     console.log(`Scraping process started`)
 
-    const {shop_id, first_name, scrapeButtonType} = req.body;
+    const {shop_id, first_name, scrapeButtonType, remove_final_word} = req.body;
     let {refresh_token, access_token} = req.body;
     const user_submitted_lines = req.body.textInput.split('\n');
     const {limit_results} = req.body;
@@ -91,6 +91,7 @@ router.post('/', async (req, res) => {
     scrapeButtonType === 'scrapebuttonspecificsection' ? console.log(`Scraping specific section/s`) : null;
     scrapeButtonType === 'scrapebuttonphrase' ? console.log(`Scraping by phrase`) : null;
     scrapeButtonType === 'scrapebuttonentireshop' ? console.log(`Scraping entire shop/s`) : null;
+    remove_final_word === 'true' ? console.log(`Removing final word from title`) : null;
 
     limit_results !== '' ? console.log(`Limiting results to ${limit_results} per line`) : console.log(`Not limiting results`);
 
@@ -227,6 +228,13 @@ router.post('/', async (req, res) => {
         console.log(`Found ${currentRowListingData.length} matching listings for: ${row}`);
         allListingData.push(...currentRowListingData);
 
+    }
+
+    // For each listing, if remove_final_word is true, remove the last word from the title
+    if (remove_final_word === 'true') {
+        allListingData.forEach(listing => {
+            listing.title = listing.title.split(' ').slice(0, -1).join(' ');
+        });
     }
 
     // Now for each listing, get the image url
