@@ -99,31 +99,42 @@ router.post('/stage1', upload.single('txtfile'), async function(req, res) {
                 titleMain = titleMain.replace(regex, '');
             }
         });
-        
+
         //Remove any leading space
         titleMain = titleMain.trimStart();
 
-        // Remove trailing commas and spaces
-        titleMain = titleMain.replace(/[, ]*$/, '');
-    
+        let newCombinedTitle = titlePrefix + titleMain;
+
+        // Replace multiple commas with a single comma
+        newCombinedTitle = newCombinedTitle.replace(/,+/g, ',');
+
         // Replace multiple spaces with a single space
-        titleMain = titleMain.replace(/\s+/g, ' ');
+        newCombinedTitle = newCombinedTitle.replace(/\s+/g, ' ');
+
+        // Remove trailing commas and spaces
+        newCombinedTitle = newCombinedTitle.replace(/[, ]*$/, '');
+
+        // Remove a comma that is next to a full stop
+        newCombinedTitle = newCombinedTitle.replace(/\.,/g, '.');
+
+        // Remove spaces that are next to a full stop
+        newCombinedTitle = newCombinedTitle.replace(/\. /g, '.');
+
+        // Remove spaces that are before a comma
+        newCombinedTitle = newCombinedTitle.replace(/ ,/g, ',');
     
         // Replace all spaces with commas
-        titleMain = titleMain.replace(/\s/g, ',');
-    
+        //newCombinedTitle = newCombinedTitle.replace(/\s/g, ',');
+
         // Replace multiple commas with a single comma
-        titleMain = titleMain.replace(/,+/g, ',');
-    
-        // Remove a comma that is next to a full stop
-        titleMain = titleMain.replace(/\.,/g, '.');
+        newCombinedTitle = newCombinedTitle.replace(/,+/g, ',');
     
         // If there are more than two commas in the title, add it to moreThanThreeKeywords
         if (titleMain.split(',').length > 2) {
             moreThanThreeKeywords.push(titleMain);
         }
     
-        return titlePrefix + titleMain; // Combine the prefix and the main part of the title
+        return newCombinedTitle; // Combine the prefix and the main part of the title
     });
 
     function getFormattedDate() {
