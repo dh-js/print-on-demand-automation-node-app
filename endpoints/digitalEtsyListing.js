@@ -268,7 +268,7 @@ router.post('/', async (req, res) => {
                     if (row['Digital'] === 'Yes') {
                         let designFileNameWithoutExtension = row['Digital Single Image File'].replace(/\.png$/,'');
                         let testPhotoMockupFolderPath = './digital_listing_photos/' + designFileNameWithoutExtension;
-                        let testVideoMockupFilePath = './digital_listing_videos/' + designFileNameWithoutExtension + '_video.mp4';
+                        let testVideoMockupFilePath = './digital_listing_videos/' + designFileNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
                         let testDownloadablesFolderPath = './digital_listing_files/' + designFileNameWithoutExtension;
                         
                         checkPathAndReportError(testPhotoMockupFolderPath, "photos folder", lineCount, csvErrorArray);
@@ -278,7 +278,7 @@ router.post('/', async (req, res) => {
                     if (row['Digital Set'] === 'Yes') {
                         let designFileNameWithoutExtension = row['Digital Set Single Image File'].replace(/\.png$/,'');
                         let testPhotoMockupFolderPath = './digital_listing_photos/' + designFileNameWithoutExtension;
-                        let testVideoMockupFilePath = './digital_listing_videos/' + designFileNameWithoutExtension + '_video.mp4';
+                        let testVideoMockupFilePath = './digital_listing_videos/' + designFileNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
                         let testDownloadablesFolderPath = './digital_listing_files/' + designFileNameWithoutExtension;
                         
                         checkPathAndReportError(testPhotoMockupFolderPath, "photos folder", lineCount, csvErrorArray);
@@ -747,7 +747,7 @@ router.post('/', async (req, res) => {
 
                 console.log(`Uploading video for listing ${imageRowUploadingCounter} of ${rowsArrayAfterEtsyDraftCreation.length}...`)
 
-                let videoFileName = imageFolderName + '_video.mp4';
+                let videoFileName = imageFolderName.split('_').slice(0, 2).join('_') + '_video.mp4';
                 videoFilePath = './digital_listing_videos/' + videoFileName;
 
                 // Read the file to be uploaded

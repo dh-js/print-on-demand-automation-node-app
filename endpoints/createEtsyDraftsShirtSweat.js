@@ -209,13 +209,15 @@ router.post('/', async (req, res) => {
                             let testMockupImageNameWithoutExtension = row['Single Image File'].replace(/\.png$/,'');
                             let testMockupFolderName = testMockupImageNameWithoutExtension + "_shirt";
                             testMockupFilePath = './shirt_listing_photos/' + '/' + testMockupFolderName;
-                            testVideoMockupFilePath = './shirt_listing_videos/' + testMockupFolderName + '_video.mp4';
+                            let videoFileName = testMockupImageNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
+                            testVideoMockupFilePath = './shirt_listing_videos/' + videoFileName;
                         } else if (row['Primary Image File']) {
                             //set the folder to the primary image name
                             let testMockupImageNameWithoutExtension = row['Primary Image File'].replace(/\.png$/,'');
                             let testMockupFolderName = testMockupImageNameWithoutExtension + "_shirt";
                             testMockupFilePath = './shirt_listing_photos/' + '/' + testMockupFolderName;
-                            testVideoMockupFilePath = './shirt_listing_videos/' + testMockupFolderName + '_video.mp4';
+                            let videoFileName = testMockupImageNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
+                            testVideoMockupFilePath = './shirt_listing_videos/' + videoFileName;
                         }
                     
                         if (!fs.existsSync(testMockupFilePath)) {
@@ -238,13 +240,15 @@ router.post('/', async (req, res) => {
                             let testMockupImageNameWithoutExtension = row['Single Image File'].replace(/\.png$/,'');
                             let testMockupFolderName = testMockupImageNameWithoutExtension + "_sweatshirt";
                             testMockupFilePath = './sweatshirt_listing_photos/' + '/' + testMockupFolderName;
-                            testVideoMockupFilePath = './sweatshirt_listing_videos/' + testMockupFolderName + '_video.mp4';
+                            let videoFileName = testMockupImageNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
+                            testVideoMockupFilePath = './sweatshirt_listing_videos/' + videoFileName;
                         } else if (row['Primary Image File']) {
                             //set the folder to the primary image name
                             let testMockupImageNameWithoutExtension = row['Primary Image File'].replace(/\.png$/,'');
                             let testMockupFolderName = testMockupImageNameWithoutExtension + "_sweatshirt";
                             testMockupFilePath = './sweatshirt_listing_photos' + '/' + testMockupFolderName;
-                            testVideoMockupFilePath = './sweatshirt_listing_videos/' + testMockupFolderName + '_video.mp4';
+                            let videoFileName = testMockupImageNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
+                            testVideoMockupFilePath = './sweatshirt_listing_videos/' + videoFileName;
                         }
                     
                         if (!fs.existsSync(testMockupFilePath)) {
@@ -744,7 +748,7 @@ router.post('/', async (req, res) => {
             //Now for this row upload the video
             try {
 
-                let videoFileName = imageFolderName + '_video.mp4';
+                let videoFileName = thisRow['Image Folder'].split('_').slice(0, 2).join('_') + "_video.mp4";
                 
                 if (thisRow['Shirt']) {
                     videoFilePath = './shirt_listing_videos/' + videoFileName;
