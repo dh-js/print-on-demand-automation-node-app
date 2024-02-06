@@ -206,14 +206,14 @@ router.post('/', async (req, res) => {
                         let testVideoMockupFilePath;
                         if (row['Single Image File']) {
                             //set the folder to the single image name
-                            let testMockupImageNameWithoutExtension = row['Single Image File'].replace(/\.png$/,'');
+                            let testMockupImageNameWithoutExtension = row['Single Image File'].replace(/\.(png|jpg)$/,'');
                             let testMockupFolderName = testMockupImageNameWithoutExtension + "_shirt";
                             testMockupFilePath = './shirt_listing_photos/' + '/' + testMockupFolderName;
                             let videoFileName = testMockupImageNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
                             testVideoMockupFilePath = './shirt_listing_videos/' + videoFileName;
                         } else if (row['Primary Image File']) {
                             //set the folder to the primary image name
-                            let testMockupImageNameWithoutExtension = row['Primary Image File'].replace(/\.png$/,'');
+                            let testMockupImageNameWithoutExtension = row['Primary Image File'].replace(/\.(png|jpg)$/,'');
                             let testMockupFolderName = testMockupImageNameWithoutExtension + "_shirt";
                             testMockupFilePath = './shirt_listing_photos/' + '/' + testMockupFolderName;
                             let videoFileName = testMockupImageNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
@@ -237,14 +237,14 @@ router.post('/', async (req, res) => {
                         let testVideoMockupFilePath;
                         if (row['Single Image File']) {
                             //set the folder to the single image name
-                            let testMockupImageNameWithoutExtension = row['Single Image File'].replace(/\.png$/,'');
+                            let testMockupImageNameWithoutExtension = row['Single Image File'].replace(/\.(png|jpg)$/,'');
                             let testMockupFolderName = testMockupImageNameWithoutExtension + "_sweatshirt";
                             testMockupFilePath = './sweatshirt_listing_photos/' + '/' + testMockupFolderName;
                             let videoFileName = testMockupImageNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
                             testVideoMockupFilePath = './sweatshirt_listing_videos/' + videoFileName;
                         } else if (row['Primary Image File']) {
                             //set the folder to the primary image name
-                            let testMockupImageNameWithoutExtension = row['Primary Image File'].replace(/\.png$/,'');
+                            let testMockupImageNameWithoutExtension = row['Primary Image File'].replace(/\.(png|jpg)$/,'');
                             let testMockupFolderName = testMockupImageNameWithoutExtension + "_sweatshirt";
                             testMockupFilePath = './sweatshirt_listing_photos' + '/' + testMockupFolderName;
                             let videoFileName = testMockupImageNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
@@ -345,7 +345,7 @@ router.post('/', async (req, res) => {
                         return fileIdElement ? fileIdElement.textContent.split(':')[1].trim() : null;
                     });
                     if (fileId) {
-                        let imageNameWithoutExtension = row['Single Image File'].replace(/\.png$/,'');
+                        let imageNameWithoutExtension = row['Single Image File'].replace(/\.(png|jpg)$/,'');
                         row['Image Folder'] = imageNameWithoutExtension;
                         row['Single Image File'] = fileId;
                     }
@@ -367,7 +367,7 @@ router.post('/', async (req, res) => {
                         return fileIdElement ? fileIdElement.textContent.split(':')[1].trim() : null;
                     });
                     if (fileId) {
-                        let imageNameWithoutExtension = row['Primary Image File'].replace(/\.png$/,'');
+                        let imageNameWithoutExtension = row['Primary Image File'].replace(/\.(png|jpg)$/,'');
                         // Check if the 'row' already has the key "Draft Created On Etsy" because don't want to overwrite the image folder with the ID
                         row['Image Folder'] = imageNameWithoutExtension;
                         row['Primary Image File'] = fileId;

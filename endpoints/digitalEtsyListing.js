@@ -266,7 +266,7 @@ router.post('/', async (req, res) => {
                     }
                     
                     if (row['Digital'] === 'Yes') {
-                        let designFileNameWithoutExtension = row['Digital Single Image File'].replace(/\.png$/,'');
+                        let designFileNameWithoutExtension = row['Digital Single Image File'].replace(/\.(png|jpg)$/,'');
                         let testPhotoMockupFolderPath = './digital_listing_photos/' + designFileNameWithoutExtension;
                         let testVideoMockupFilePath = './digital_listing_videos/' + designFileNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
                         let testDownloadablesFolderPath = './digital_listing_files/' + designFileNameWithoutExtension;
@@ -276,7 +276,7 @@ router.post('/', async (req, res) => {
                         checkPathAndReportError(testDownloadablesFolderPath, "downloadable-files folder", lineCount, csvErrorArray);
                     }
                     if (row['Digital Set'] === 'Yes') {
-                        let designFileNameWithoutExtension = row['Digital Set Single Image File'].replace(/\.png$/,'');
+                        let designFileNameWithoutExtension = row['Digital Set Single Image File'].replace(/\.(png|jpg)$/,'');
                         let testPhotoMockupFolderPath = './digital_listing_photos/' + designFileNameWithoutExtension;
                         let testVideoMockupFilePath = './digital_listing_videos/' + designFileNameWithoutExtension.split('_').slice(0, 2).join('_') + "_video.mp4";
                         let testDownloadablesFolderPath = './digital_listing_files/' + designFileNameWithoutExtension;
