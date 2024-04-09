@@ -84,6 +84,25 @@
             color: darkred;
             font-size: 0.9rem;
         }
+        #csv_drop_zone {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed #aaa;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            cursor: pointer;
+            background-color: #f2f2f2;
+        }
+        #csv_drop_zone.dragover {
+            border-color: #777;
+            background-color: #e6e6e6; /* darker grey when a file is dragged over */
+        }
+        #csv_drop_zone.file-dropped {
+            background-color: #e6f7e9; /* very light green when a file is dropped */
+        }
         
     </style>
 </head>
@@ -213,6 +232,23 @@
                 {{/if}}
             </form>
         </ol>
+        <ol class="action-step">
+            <h3>Download listing images from .csv (Via API)</h3>
+            <form action="/downloadImagesViaAPI" method="post" id="downloadImagesViaAPIForm" class="form-custom text-center" enctype="multipart/form-data">
+            <div id="csv_drop_zone">Drag and drop the .csv file here or click to select</div>
+            <input type="file" id="csv_fileInput" name="csvfile" accept=".csv" class="form-control mb-2" style="width: 100%; display: none;" required>
+            <input type="hidden" name="access_token" value="{{access_token_hbs}}" />
+            <input type="hidden" name="refresh_token" value="{{refresh_token_hbs}}" />
+            <input type="hidden" name="shop_id" value="{{shop_id_hbs}}" />
+            <input type="hidden" name="first_name" value="{{first_name_hbs}}" />
+            <button type="submit" class="btn btn-primary btn-lg mb-2">Submit</button>
+                {{#if completedDownloadImagesViaAPI}}
+                    <div class="alert alert-success mt-3" role="alert">
+                        Downloading of images from .csv successfully completed!
+                    </div>
+                {{/if}}
+            </form>
+        </ol>
     </div>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
@@ -268,6 +304,46 @@
             document.getElementById('buttonPressed').value = 'imageCSV';
             $('#overlay').show();
             document.getElementById('pinterestForm').submit();
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var dropZone = document.getElementById('csv_drop_zone');
+            var fileInput = document.getElementById('csv_fileInput');
+
+            dropZone.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropZone.classList.remove('dragover'); 
+                dropZone.classList.add('file-dropped');
+
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    // Update drop zone text
+                    dropZone.innerText = e.dataTransfer.files[0].name;
+                }
+            });
+
+            // Update drop zone text when file is selected via file dialog
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length) {
+                    dropZone.innerText = fileInput.files[0].name;
+                    dropZone.classList.add('file-dropped');
+                }
+            });
         });
     </script>
 </body>

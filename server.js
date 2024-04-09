@@ -18,6 +18,7 @@ const cleanseTextfileEndpoint = require('./endpoints/cleanseTextfileEndpoint');
 const midjourneyImagesEndpoint = require('./endpoints/midjourneyImagesEndpoint');
 const pinterestEndpoint = require('./endpoints/pinterestEndpoint');
 const etsyScraperViaAPIEndpoint = require('./endpoints/etsyScraperViaAPI');
+const downloadImagesViaAPIEndpoint = require('./endpoints/downloadImagesViaAPI');
 
 const app = express();
 const { exec } = require('child_process');
@@ -36,6 +37,7 @@ app.use('/cleanseTextfileEndpoint', cleanseTextfileEndpoint);
 app.use('/midjourneyImagesEndpoint', midjourneyImagesEndpoint);
 app.use('/pinterestEndpoint', pinterestEndpoint);
 app.use('/etsyScraperViaAPI', etsyScraperViaAPIEndpoint);
+app.use('/downloadImagesViaAPI', downloadImagesViaAPIEndpoint);
 
 //OAUTH Values
 const base64URLEncode = (str) =>
