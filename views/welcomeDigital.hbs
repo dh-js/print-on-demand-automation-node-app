@@ -247,6 +247,12 @@
                         Downloading of images from .csv successfully completed!
                     </div>
                 {{/if}}
+                {{#if completedDownloadImagesViaAPIErrors}}
+                    <p class="failure-message"><b>There were the following errors:</b></p>
+                    {{#each completedDownloadImagesViaAPIErrors}}
+                        <p class="failure-message">{{this}}</p>
+                    {{/each}}
+                {{/if}}
             </form>
         </ol>
     </div>
