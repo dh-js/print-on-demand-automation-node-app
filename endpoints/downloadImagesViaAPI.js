@@ -125,11 +125,14 @@ router.post('/', upload.single('csvfile'), async (req, res) => {
         }
         // Listing ID found, so now fecth listing data
         try {
-        let indiv_listing_api_url = `https://openapi.etsy.com/v3/application/listings/${listingID}/images`;
-        let getImagesResponse = await getApiCall(indiv_listing_api_url, clientID, access_token);
-        for (let image of getImagesResponse.results) {
-            imageURLArray.push(image.url_fullxfull);
-            }
+            let indiv_listing_api_url = `https://openapi.etsy.com/v3/application/listings/${listingID}/images`;
+            let getImagesResponse = await getApiCall(indiv_listing_api_url, clientID, access_token);
+            // Get all images
+            // for (let image of getImagesResponse.results) {
+            //     imageURLArray.push(image.url_fullxfull);
+            // }
+            // Just get first image
+            imageURLArray.push(getImagesResponse.results[0].url_fullxfull);
         } catch (error) {
             let errorString = `Failed to fetch images for row ${rowCounter}, listing ${url}: ${error}`;
             console.error(errorString);
