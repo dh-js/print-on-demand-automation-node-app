@@ -132,7 +132,11 @@ router.post('/', upload.single('csvfile'), async (req, res) => {
             //     imageURLArray.push(image.url_fullxfull);
             // }
             // Just get first image
-            imageURLArray.push(getImagesResponse.results[0].url_fullxfull);
+            imageURLArray.push({
+                imageURL: getImagesResponse.results[0].url_fullxfull,
+                product_name: row.product_name
+            });
+
         } catch (error) {
             let errorString = `Failed to fetch images for row ${rowCounter}, listing ${url}: ${error}`;
             console.error(errorString);
@@ -142,12 +146,26 @@ router.post('/', upload.single('csvfile'), async (req, res) => {
     }
     console.log(`Finished getting URLs for ${rowsArray.length} listings`);
 
-    // So now imageURLArray contains all image URLs to be downloaded
+    // So now imageURLArray contains all image URLs to be downloaded & also the product title from the .csv
 
-    // Create a 'downloaded_images' folder in the app root if it doesnt already exist
-    const downloadedImagesDirectory = './downloaded_images';
+    function getFormattedDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+        return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+        
+    }
+
+    // Create a new directory if it doesn't exist
+    const downloadedImagesDirectory = `./downloaded_images-${getFormattedDate()}`;
     if (!fs.existsSync(downloadedImagesDirectory)){
         fs.mkdirSync(downloadedImagesDirectory);
+        console.log(`Created directory ${downloadedImagesDirectory}`);
     }
 
     // Function to download image
@@ -174,8 +192,24 @@ router.post('/', upload.single('csvfile'), async (req, res) => {
     console.log(`Starting download of ${imageURLArray.length} images`);
     let imageCounter = 1;
     for (let image of imageURLArray) {
-        let filename = image.split('/').pop();
-        await downloadImage(image, path.join(downloadedImagesDirectory, filename));
+        rowCounter++;
+        let baseFilename = `${imageCounter + 1}_${image.product_name}`
+        let extension = '.jpg';
+        let maxLength = 255; // Max filename length for windows
+        // Calculate the full path for the file
+        let fullPath = path.join(downloadedImagesDirectory, baseFilename + extension);
+        //console.log(`First full path: ${fullPath}`);
+        // Check if the full path exceeds the maxLength and truncate if necessary
+        if (fullPath.length > maxLength) {
+            // Calculate how many characters to remove to meet the maxLength requirement
+            let excessLength = fullPath.length - maxLength;
+            // Truncate the baseFilename accordingly
+            baseFilename = baseFilename.substring(0, baseFilename.length - excessLength - 1); // -1 to account for potential rounding issues
+        }
+        // Reconstruct the full path with the potentially truncated filename
+        fullPath = path.join(downloadedImagesDirectory, baseFilename + extension);
+        //console.log(`Second full path: ${fullPath}`);
+        await downloadImage(image.imageURL, fullPath);
         if (imageCounter % 10 === 0) {
             console.log(`${imageCounter} images of ${imageURLArray.length} have been downloaded`);
         }
@@ -185,6 +219,7 @@ router.post('/', upload.single('csvfile'), async (req, res) => {
     //res.send(`<pre>${JSON.stringify(imageURLArray, null, 2)}</pre>`);
     
     console.log(`Downloading images via API process complete`);
+    console.log(`Images can be found in ${downloadedImagesDirectory}`);
 
     if (errorsArray.length > 0) {
         res.render("welcomeDigital", {
